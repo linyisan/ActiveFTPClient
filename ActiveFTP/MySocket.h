@@ -7,7 +7,6 @@ class MySocket
 public:
 	MySocket();
 	~MySocket();
-	bool isConnected();
 	bool CheckResponseCode(int VerifyCode);
 	bool Connect(const char *addr_To, int port_To);
 	bool Accept();
@@ -24,7 +23,6 @@ protected:
 private:
 	char BufForRecv[BUF_SIZE];
 	char BufForSend[BUF_SIZE];
-	bool m_isConnected;
 	//char *addr_Serv;
 	//char *port_Serv;
 	//int Code_Respond;

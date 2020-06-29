@@ -73,11 +73,6 @@ MySocket::MySocket()
 	}
 }
 
-bool MySocket::isConnected()
-{
-	return this->m_isConnected;
-}
-
 /*
 	@brief 验证响应码
 	@VerifyCode 传入测试的响应码
@@ -92,7 +87,6 @@ bool MySocket::CheckResponseCode(int VerifyCode)
 bool MySocket::Connect(const char * addr_To, int port_To)
 {
 	int ret = 0;
-	m_isConnected = false;
 	SOCKADDR_IN mAddr;
 	memset(&mAddr, 0, sizeof(mAddr));
 	mAddr.sin_family = AF_INET;
@@ -109,8 +103,7 @@ bool MySocket::Connect(const char * addr_To, int port_To)
 		ErrorHandle("connect()error!", WSAGetLastError());
 		return false;
 	}
-	m_isConnected = true;
-	return m_isConnected;
+	return true;
 }
 
 int MySocket::GetResponseCodeAtHead()
@@ -124,9 +117,7 @@ int MySocket::GetResponseCodeAtHead()
 
 bool MySocket::Accept()
 {
-	m_isConnected = false;
 	int ret = 0;
-	m_isConnected = false;
 	//if (!Bind(addr_me, port_me)) return false;
 
 	// listen() 开始监听/工作
@@ -144,9 +135,8 @@ bool MySocket::Accept()
 	if (INVALID_SOCKET == socketClnt)
 	{
 		ErrorHandle("accept() socketData error!", WSAGetLastError());
-		return m_isConnected;
+		return false;
 	}
-	m_isConnected = true;
 	return true;
 }
 

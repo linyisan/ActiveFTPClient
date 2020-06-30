@@ -10,11 +10,13 @@ public:
 	bool CheckResponseCode(int VerifyCode);
 	bool Connect(const char *addr_To, int port_To);
 	bool Accept();
-	bool SendPack(const char *data, int sz_data);
+	int SendPack(const char *data, int sz_data, SOCKET socket = NULL);
 	int RecvPack(char *Buf, SOCKET socket = NULL);
+	int SendPackToClient(char *Buf, int sz_Buf);
 	int RecvPackFromClient(char *Buf);
 	SOCKADDR_IN * Bind(const char *addr_To, int port_To=0);
 	void CloseSocket();
+	char *GetLocalHostIP();
 
 protected:
 	int  GetResponseCodeAtHead();
@@ -26,7 +28,8 @@ private:
 	//char *addr_Serv;
 	//char *port_Serv;
 	//int Code_Respond;
-	SOCKADDR_IN msockAddr;
-	SOCKET mSocket, socketServ, socketClnt;
+	IN_ADDR LocalHostIP;
+	SOCKADDR_IN AddrServ;
+	SOCKET mSocket, socketServ, socketClnt; // 在本机充当服务器时使用socketServ,socketClnt；其中socketClnt用来收发数据
 };
 

@@ -86,7 +86,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,12 +126,10 @@
     <ClCompile Include="ActiveFTPClient.cpp" />
     <ClCompile Include="MySocket.cpp" />
     <ClCompile Include="run.cpp" />
-    <ClCompile Include="SocketClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActiveFTPClient.h" />
     <ClInclude Include="MySocket.h" />
-    <ClInclude Include="SocketClient.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

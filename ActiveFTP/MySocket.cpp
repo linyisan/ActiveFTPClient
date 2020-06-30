@@ -17,6 +17,10 @@ void MySocket::ErrorHandle(const char * ErrorMsg, int ErrorCode)
 	printf("%s\n", msg);
 }
 
+/*
+	@brief 为(服务端)套接字绑定地址和端口（主动模式）
+	@comment 如bind()的端口填0，则可通过getsockname()来获取系统自动分配的端口
+*/
 SOCKADDR_IN * MySocket::Bind(const char * addr_To, int port_To)
 {
 	int ret = 0;
@@ -26,7 +30,6 @@ SOCKADDR_IN * MySocket::Bind(const char * addr_To, int port_To)
 	mAddr.sin_family = AF_INET;
 	mAddr.sin_port = htons(port_To);
 	mAddr.sin_addr.S_un.S_addr = ret = inet_addr(addr_To);
-	//mAddr.sin_addr.S_un.S_addr = ret = htonl(INADDR_ANY);
 	if (INADDR_NONE == ret)
 	{
 		hostent * pHostent = gethostbyname(addr_To);
@@ -38,18 +41,24 @@ SOCKADDR_IN * MySocket::Bind(const char * addr_To, int port_To)
 		ErrorHandle("Bind() error!", WSAGetLastError());
 		return NULL;
 	}
-	SOCKADDR_IN name;
-	memset(&name, 0, sizeof(name));
-	int sz_name = sizeof(name);
-	getsockname(socketServ, (struct sockaddr *)&name, &sz_name);
-	msockAddr = name;
-	return &name;
+	int sz_AddrServ = sizeof(AddrServ);
+	memset(&AddrServ, 0, sizeof(sz_AddrServ));
+	getsockname(socketServ, (struct sockaddr *)&AddrServ, &sz_AddrServ); // 获取系统分配的端口
+	return &AddrServ;
 }
 
+/*
+	@brief 关闭创建FTP数据通道时用的套接字
+*/
 void MySocket::CloseSocket()
 {
 	if (socketClnt) closesocket(socketClnt);
 	if (socketServ) closesocket(socketServ);
+}
+
+char * MySocket::GetLocalHostIP()
+{
+	return inet_ntoa(LocalHostIP);
 }
 
 MySocket::MySocket()
@@ -84,6 +93,11 @@ bool MySocket::CheckResponseCode(int VerifyCode)
 	return false;
 }
 
+/*
+	@brief 连接到服务器
+	@addr_To 服务器IP地址
+	@port_To 服务器端口号
+*/
 bool MySocket::Connect(const char * addr_To, int port_To)
 {
 	int ret = 0;
@@ -103,9 +117,15 @@ bool MySocket::Connect(const char * addr_To, int port_To)
 		ErrorHandle("connect()error!", WSAGetLastError());
 		return false;
 	}
+	int sz_AddrServ = sizeof(AddrServ);
+	getsockname(mSocket, (SOCKADDR*)&AddrServ, &sz_AddrServ); // 获取本机IP地址信息
+	LocalHostIP = AddrServ.sin_addr;
 	return true;
 }
 
+/*
+	@brief 获取3位消息响应码
+*/
 int MySocket::GetResponseCodeAtHead()
 {
 	char strResCode[3] = { 0 };
@@ -118,7 +138,6 @@ int MySocket::GetResponseCodeAtHead()
 bool MySocket::Accept()
 {
 	int ret = 0;
-	//if (!Bind(addr_me, port_me)) return false;
 
 	// listen() 开始监听/工作
 	if (SOCKET_ERROR == listen(socketServ, SOMAXCONN))
@@ -130,7 +149,8 @@ bool MySocket::Accept()
 	SOCKADDR_IN addr_srvData;
 	int sz_addr = sizeof(addr_srvData);
 	memset(&addr_srvData, 0, sz_addr);
-	getsockname(socketServ, (SOCKADDR*)&msockAddr, &sz_addr);
+	getsockname(socketServ, (SOCKADDR*)&addr_srvData, &sz_addr);
+	memset(&addr_srvData, 0, sz_addr);
 	socketClnt = accept(socketServ, (SOCKADDR*)&addr_srvData, &sz_addr);
 	if (INVALID_SOCKET == socketClnt)
 	{
@@ -146,19 +166,27 @@ bool MySocket::Accept()
 
 /*
 	@brief 底层发送函数
+	@data 要发送的内容
+	@sz_data 发送内容的字节大小
+	@socket 负责接收的套接字
 */
-bool MySocket::SendPack(const char * data, int sz_data)
+int MySocket::SendPack(const char * data, int sz_data, SOCKET socket)
 {
-	//FlushRecvBuf();
-	if (SOCKET_ERROR == send(mSocket, data, sz_data, 0))
+	int nSend = 0;
+	SOCKET tempsocket = socket;
+	if (0 == tempsocket)
+		tempsocket = mSocket;
+	nSend = send(tempsocket, data, sz_data, 0);
+	if (SOCKET_ERROR == nSend)
 	{
 		ErrorHandle("Send() eror!数据发送失败!\n", WSAGetLastError());
-		return false;
 	}
-	return true;
+	return nSend;
 }
 /*
-	@brief 原始接收数据函数
+	@brief 底层接收数据函数
+	@Buf 存放接收的内容
+	@socket 负责接收的套接字
 */
 int MySocket::RecvPack(char *Buf, SOCKET socket)
 {
@@ -176,6 +204,20 @@ int MySocket::RecvPack(char *Buf, SOCKET socket)
 	return nRecv;
 }
 
+/*
+	@brief 发送数据函数(本机充当服务端时)
+	@sz_Buf 要发送数据的字节大小
+	@return 成功/实际发送数据的字节大小
+*/
+int MySocket::SendPackToClient(char *Buf, int sz_Buf)
+{
+	return SendPack(Buf,sz_Buf, socketClnt);
+}
+
+/*
+	@brief 发送数据函数(本机充当服务端时)
+	@return 成功/实际接收数据的字节大小
+*/
 int MySocket::RecvPackFromClient(char *Buf)
 {
 	return RecvPack(Buf, socketClnt);

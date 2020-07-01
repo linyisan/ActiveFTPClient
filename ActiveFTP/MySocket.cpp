@@ -21,7 +21,7 @@ void MySocket::ErrorHandle(const char * ErrorMsg, int ErrorCode)
 	@brief 为(服务端)套接字绑定地址和端口（主动模式）
 	@comment 如bind()的端口填0，则可通过getsockname()来获取系统自动分配的端口
 */
-SOCKADDR_IN * MySocket::Bind(const char * addr_To, int port_To)
+SOCKADDR_IN * MySocket::BindAndListen(const char * addr_To, int port_To)
 {
 	int ret = 0;
 	SOCKADDR_IN mAddr;
@@ -41,9 +41,18 @@ SOCKADDR_IN * MySocket::Bind(const char * addr_To, int port_To)
 		ErrorHandle("Bind() error!", WSAGetLastError());
 		return NULL;
 	}
+
+	// listen() 开始监听/工作
+	if (SOCKET_ERROR == listen(socketServ, 3))
+	{
+		ErrorHandle("listen() socketClnt error!", WSAGetLastError());
+		return false;
+	}
+
 	int sz_AddrServ = sizeof(AddrServ);
 	memset(&AddrServ, 0, sizeof(sz_AddrServ));
 	getsockname(socketServ, (struct sockaddr *)&AddrServ, &sz_AddrServ); // 获取系统分配的端口
+
 	return &AddrServ;
 }
 
@@ -138,13 +147,7 @@ int MySocket::GetResponseCodeAtHead()
 bool MySocket::Accept()
 {
 	int ret = 0;
-
-	// listen() 开始监听/工作
-	if (SOCKET_ERROR == listen(socketServ, SOMAXCONN))
-	{
-		ErrorHandle("listen() socketClnt error!", WSAGetLastError());
-		return false;
-	}
+	
 	// accept() 接受来自FTP服务器的数据连接
 	SOCKADDR_IN addr_srvData;
 	int sz_addr = sizeof(addr_srvData);

@@ -14,7 +14,7 @@ public:
 	int RecvPack(char *Buf, SOCKET socket = NULL);
 	int SendPackToClient(char *Buf, int sz_Buf);
 	int RecvPackFromClient(char *Buf);
-	SOCKADDR_IN * Bind(const char *addr_To, int port_To=0);
+	SOCKADDR_IN * BindAndListen(const char *addr_To, int port_To=0);
 	void CloseSocket();
 	char *GetLocalHostIP();
 

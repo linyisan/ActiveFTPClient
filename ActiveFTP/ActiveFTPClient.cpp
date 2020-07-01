@@ -30,7 +30,7 @@ bool ActiveFTPClient::CreateFTPDataConnect()
 	char *strResMsg;
 	char strCommand[BUF_SIZE] = { 0 };
 
-	SOCKADDR_IN addr_data = *mySocket->Bind(mySocket->GetLocalHostIP());
+	SOCKADDR_IN addr_data = *mySocket->BindAndListen(mySocket->GetLocalHostIP());
 	int tempPort = ntohs(addr_data.sin_port);
 	char strAddr[1024] = { 0 }; // 192,168,101,100,14,178
 	strcpy(strAddr, mySocket->GetLocalHostIP());
@@ -51,8 +51,8 @@ bool ActiveFTPClient::CreateFTPDataConnect()
 	printf("Server:%s\n", strResMsg);
 	if (!mySocket->CheckResponseCode(200)) return false;
 
-	if (!mySocket->Accept()) return false;
-	printf(">>成功建立数据连接%d\n", tempPort);
+	//if (!mySocket->Accept()) return false;
+	//printf(">>成功建立数据连接%d\n", tempPort);
 	return true;
 
 }
@@ -144,7 +144,11 @@ bool ActiveFTPClient::GetFTPFileDirectory()
 	memcpy(strCommand + strlen("LIST"), "\r\n", 2);
 	strResMsg = SendCommandAndRecvMessage(strCommand);
 	printf("Server:%s\n", strResMsg);
-	if (!mySocket->CheckResponseCode(125)) return false;
+	if (!((mySocket->CheckResponseCode(125))
+			|| (mySocket->CheckResponseCode(150)))) return false;
+
+	if (!mySocket->Accept()) return false;
+	printf(">>成功建立数据连接\n");
 
 	printf(">>正在获取目录:....\n");
 	char dirinfo[BUF_SIZE] = { 0 };
@@ -188,6 +192,10 @@ bool ActiveFTPClient::DownloadFile(const char * remoteFileName, const char *save
 	if (!(mySocket->CheckResponseCode(150)
 		|| mySocket->CheckResponseCode(125))
 		) return false;
+
+
+	if (!mySocket->Accept()) return false;
+	printf(">>成功建立数据连接\n");
 
 	FILE *fp = fopen(saveFileName, "wb");
 	if (NULL == fp) return false;

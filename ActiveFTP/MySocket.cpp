@@ -52,24 +52,35 @@ SOCKADDR_IN * MySocket::BindAndListen(const char * addr_To, int port_To)
 	int sz_AddrServ = sizeof(AddrServ);
 	memset(&AddrServ, 0, sizeof(sz_AddrServ));
 	getsockname(socketServ, (struct sockaddr *)&AddrServ, &sz_AddrServ); // 获取系统分配的端口
-
 	return &AddrServ;
 }
 
 /*
-	@brief 关闭创建FTP数据通道时用的套接字
+	@brief 关闭套接字
+	@toCloseAllSocket 是否关闭所有套接字
+	@commetn 当toCloseAllSocket为false时，只关闭数据连接的套接字，否则同时关闭数据连接和控制连接的套接字。
 */
-void MySocket::CloseSocket()
+void MySocket::CloseSocket(bool toCloseAllSocket)
 {
-	if (socketClnt) closesocket(socketClnt);
-	if (socketServ) closesocket(socketServ);
+	if (0 != socketClnt) closesocket(socketClnt);
+	if (0 != socketServ) closesocket(socketServ);
+	if (toCloseAllSocket)
+	{
+		if (0 != mSocket) closesocket(mSocket);
+	}
 }
 
+/*
+	@brief 在本机成功连接(connect())服务器后，获取本机IP
+*/
 char * MySocket::GetLocalHostIP()
 {
 	return inet_ntoa(LocalHostIP);
 }
 
+/*
+	@brief 打开网络库并创建默认套接字
+*/
 MySocket::MySocket()
 {
 	WSADATA wsaData;
@@ -80,15 +91,21 @@ MySocket::MySocket()
 		ErrorHandle("WSAStartup error!");
 	}
 
-	// 1.2 校验版本
-
 	// 2. socket() 创建控制端口的套接字
-	mSocket = socket(AF_INET, SOCK_STREAM, 0);
+	this->mSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (INVALID_SOCKET == mSocket)
 	{
 		ErrorHandle(TEXT("socket() error"), WSAGetLastError());
 		WSACleanup();
 	}
+	this->socketClnt = NULL;
+	this->socketServ = NULL;
+}
+
+MySocket::~MySocket()
+{
+	CloseSocket(true);
+	WSACleanup();
 }
 
 /*
@@ -142,8 +159,10 @@ int MySocket::GetResponseCodeAtHead()
 	return atoi(strResCode);
 }
 
-
-
+/*
+	@brief 在套接字处于监听状态(listen())，后调用该函数等待客户端发起连接
+	@comment 若没有客户端发起连接到本机，该函数是阻塞的
+*/
 bool MySocket::Accept()
 {
 	int ret = 0;
@@ -163,15 +182,11 @@ bool MySocket::Accept()
 	return true;
 }
 
-
-
-
-
 /*
 	@brief 底层发送函数
 	@data 要发送的内容
 	@sz_data 发送内容的字节大小
-	@socket 负责接收的套接字
+	@socket 负责发送的套接字
 */
 int MySocket::SendPack(const char * data, int sz_data, SOCKET socket)
 {
@@ -208,7 +223,7 @@ int MySocket::RecvPack(char *Buf, SOCKET socket)
 }
 
 /*
-	@brief 发送数据函数(本机充当服务端时)
+	@brief 发送数据(本机充当服务端时)
 	@sz_Buf 要发送数据的字节大小
 	@return 成功/实际发送数据的字节大小
 */
@@ -218,7 +233,7 @@ int MySocket::SendPackToClient(char *Buf, int sz_Buf)
 }
 
 /*
-	@brief 发送数据函数(本机充当服务端时)
+	@brief 接收数据(本机充当服务端时)
 	@return 成功/实际接收数据的字节大小
 */
 int MySocket::RecvPackFromClient(char *Buf)

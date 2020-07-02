@@ -41,8 +41,9 @@ char * ActiveFTPClient::SendCommandAndRecvMessage(const char * cmd)
 bool ActiveFTPClient::CreateFTPDataConnect()
 {
 	char strCommand[BUF_SIZE] = { 0 };
-	SOCKADDR_IN addr_data = *mySocket->BindAndListen(mySocket->GetLocalHostIP());	
-	int tempPort = ntohs(addr_data.sin_port);	// 获取数据连接套接字的端口
+	SOCKADDR_IN *addr_data = mySocket->BindAndListen(mySocket->GetLocalHostIP());	
+	if (!addr_data) return false;
+	int tempPort = ntohs(addr_data->sin_port);	// 获取数据连接套接字的端口
 	char strAddr[1024] = { 0 }; // 192,168,101,100,14,178
 	strcpy(strAddr, mySocket->GetLocalHostIP());
 	ReplaceStr(strAddr, ".", ",");
@@ -124,26 +125,21 @@ void ActiveFTPClient::EnterUsernameAndPassword()
 }
 
 /*
-	@brief 显示目录
+	@brief 显示目录/文件夹下的子文件夹及其文件详细信息
+	@targetPath 要显示的文件夹，默认""为当前工作文件夹
 */
-bool ActiveFTPClient::ShowFTPFileDirectory()
+bool ActiveFTPClient::ShowFTPFileDirectory(char *targetPath)
 {
 	char strCommand[BUF_SIZE] = { 0 };
 	if (!CreateFTPDataConnect()) return false;
 
-	sprintf(strCommand, "%s\r\n", "LIST");
+	sprintf(strCommand, "%s %s\r\n", "LIST", targetPath);
 	SendCommandAndRecvMessage(strCommand);
 	if (!((mySocket->CheckResponseCode(125))
 			|| (mySocket->CheckResponseCode(150)))) return false;
-
 	if (!mySocket->Accept()) return false;
 
-	char strResMsg[BUF_SIZE] = { 0 };
-	mySocket->RecvPack(strResMsg);
-	puts(strResMsg);
-	if (!mySocket->CheckResponseCode(226)) return false;
-
-	printf(">>正在获取目录:....\n");
+	//printf("\n>>正在获取目录:....\n");
 	char dirinfo[BUF_SIZE] = { 0 };
 	char ListBuf[BUF_SIZE] = { 0 };
 	int nRecv = 0;
@@ -155,9 +151,14 @@ bool ActiveFTPClient::ShowFTPFileDirectory()
 		if (nRecv > 0)
 			strcat(dirinfo, ListBuf);		// bug:若是信息太大，dirinfo会出现越界情况
 	} while (nRecv >0);
-	printf("%s", dirinfo);
-
 	mySocket->CloseSocket();
+
+	char strResMsg[BUF_SIZE] = { 0 };
+	mySocket->RecvPack(strResMsg);
+	printf("%s",strResMsg);
+	if (!mySocket->CheckResponseCode(226)) return false;
+	//printf("成功获取目录\n");
+	printf("%s", dirinfo);
 	return true;
 }
 
@@ -168,10 +169,10 @@ bool ActiveFTPClient::ShowFTPFileDirectory()
 */
 bool ActiveFTPClient::DownloadFile(const char * remoteFileName, const char *saveFileName)
 {
-	printf("\n>>准备下载文件");
+	char strCommand[BUF_SIZE] = { 0 };
 	if (!CreateFTPDataConnect())  return false;
 
-	char strCommand[BUF_SIZE] = { 0 };
+	//printf("\n>>准备下载文件%s\n", remoteFileName);
 	sprintf(strCommand, "RETR %s\r\n", remoteFileName);
 	SendCommandAndRecvMessage(strCommand);
 	if (!(mySocket->CheckResponseCode(150)
@@ -193,18 +194,18 @@ bool ActiveFTPClient::DownloadFile(const char * remoteFileName, const char *save
 		{
 			fwrite(recvBuf, sz_recv, 1, fp);
 			sz_total = sz_total + sz_recv;
-			printf("\r目前已已接受 %d KB", sz_total / 1024);
+			printf("\r>>目前已下载 %d KB", sz_total / 1000);
 		}
 	} while (sz_recv > 0);
 	fclose(fp);
+	mySocket->CloseSocket();
 
+	putchar('\n');
 	char strResMsg[BUF_SIZE] = { 0 };
 	mySocket->RecvPack(strResMsg);
-	puts(strResMsg);
+	printf("%s", strResMsg);
 	if (!mySocket->CheckResponseCode(226)) return false;
-
-	printf(">>成功下载文件%s", remoteFileName);
-	mySocket->CloseSocket();
+	//printf(">>成功下载文件%s\n", remoteFileName);
 	return true;
 }
 
@@ -214,7 +215,6 @@ bool ActiveFTPClient::DownloadFile(const char * remoteFileName, const char *save
 */
 bool ActiveFTPClient::UpdateFile(char * filePathName)
 {
-	printf("\n>>准备上传文件");
 	if (!CreateFTPDataConnect())  return false;
 	char strCommand[BUF_SIZE] = { 0 };
 	// 分割路径与文件名
@@ -222,6 +222,7 @@ bool ActiveFTPClient::UpdateFile(char * filePathName)
 	char *p;
 	strcpy(fileName, (p = strstr(filePathName, "\\")) ? p + 1 : filePathName);
 
+	//printf("\n>>准备上传文件%s\n", fileName);
 	sprintf(strCommand, "STOR %s\r\n", fileName);
 	SendCommandAndRecvMessage(strCommand);
 	if (!(mySocket->CheckResponseCode(150)
@@ -238,7 +239,6 @@ bool ActiveFTPClient::UpdateFile(char * filePathName)
 	int sz_sent = 0;	// 到目前为止总共发送的字节大小
 	int nSend = 0;	// 本次发送的字节大小
 	rewind(fp);
-	putchar('\n');
 	do
 	{
 		memset(sendBuf, 0, sizeof(sendBuf));
@@ -246,12 +246,16 @@ bool ActiveFTPClient::UpdateFile(char * filePathName)
 		fread(sendBuf, sizeof(char), sizeof(sendBuf), fp); // 返回值是实际读入数据块的个数，每块一个char字节
 		nSend = mySocket->SendPackToClient(sendBuf, sizeof(sendBuf));
 		sz_sent = sz_sent + nSend;
-		printf("\r目前已进度:%3.1f%%", 1.0 * sz_sent / sz_file *100);
+		printf("\r>>目前上传进度:%3.1f%%", 1.0 * sz_sent / sz_file *100);
 	} while (nSend > 0);
 	fclose(fp);
-
-	printf("\n>>成功上传文件%s", fileName);
 	mySocket->CloseSocket();
+
+	char strResMsg[BUF_SIZE] = { 0 };
+	mySocket->RecvPack(strResMsg);
+	printf("%s", strResMsg);
+	if (!mySocket->CheckResponseCode(226)) return false;
+	//printf(">>成功上传文件%s\n", fileName);
 	return true;
 }
 
@@ -299,10 +303,10 @@ bool ActiveFTPClient::CreateFTPDirectory(char * newDirectoryName)
 }
 
 /*
-	@brief 删除文件夹
-	@remoeDirectoryName 要删除的文件夹名
+	@brief （只能）删除空文件夹
+	@remoeDirectoryName 要删除的空文件夹名
 */
-bool ActiveFTPClient::DeleteFTPDirectory(char * remoteDirectoryName)
+bool ActiveFTPClient::DeleteEmptyFTPDirectory(char * remoteDirectoryName)
 {
 	char strCommand[BUF_SIZE] = { 0 };
 	sprintf(strCommand, "RMD %s\r\n", remoteDirectoryName);
@@ -369,7 +373,7 @@ bool ActiveFTPClient::LoginFTPServer(bool isAnonymous)
 	if (isAnonymous)
 	{
 		// 匿名登录
-		printf("\n>>启用匿名登录\n");
+		//printf(">>启用匿名登录\n");
 		sprintf(tempUsername, "%s", "anonymous");		
 		sprintf(tempPassword, "%s", "anonymous");
 	}

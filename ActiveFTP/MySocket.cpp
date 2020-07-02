@@ -14,7 +14,7 @@ void MySocket::ErrorHandle(const char * ErrorMsg, int ErrorCode)
 		sprintf(msg, "%serrNo:%d", ErrorMsg, ErrorCode);
 	else
 		strcat(msg, ErrorMsg);
-	printf("%s\n", msg);
+	fprintf(stdout, "%s\n", msg);
 }
 
 /*
@@ -95,7 +95,7 @@ MySocket::MySocket()
 	this->mSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (INVALID_SOCKET == mSocket)
 	{
-		ErrorHandle(TEXT("socket() error"), WSAGetLastError());
+		ErrorHandle(TEXT("socket() error!"), WSAGetLastError());
 		WSACleanup();
 	}
 	this->socketClnt = NULL;
@@ -197,7 +197,7 @@ int MySocket::SendPack(const char * data, int sz_data, SOCKET socket)
 	nSend = send(tempsocket, data, sz_data, 0);
 	if (SOCKET_ERROR == nSend)
 	{
-		ErrorHandle("Send() eror!Êý¾Ý·¢ËÍÊ§°Ü!\n", WSAGetLastError());
+		ErrorHandle("Send() error!", WSAGetLastError());
 	}
 	return nSend;
 }

@@ -15,11 +15,11 @@ public:
 	bool UpdateFile(char *filePathName);
 	bool DeleteRemoteFile(char *remoteFileName);
 	bool RenameRemoteFile(char *oldFileName, char *newFileName);
-	bool ShowFTPFileDirectory();
+	bool ShowFTPFileDirectory(char *targetPath = "");
 	void ShowFTPWorkingDirectory();
 	bool ChangeFTPWorkingDirectory(char *targetPath="");
 	bool CreateFTPDirectory(char *newDirectoryName);
-	bool DeleteFTPDirectory(char *remoteDirectoryName);
+	bool DeleteEmptyFTPDirectory(char *remoteDirectoryName);
 	void EndFTPSession();
 
 protected:

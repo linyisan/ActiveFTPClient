@@ -24,8 +24,8 @@ void start()
 	// 2.2 提示用户输入命令（并输入将要调用的FTP函数参数），调用对应FTP函数
 	// while() switch(){} ，以下请完成编写
 	activeFTPClient->SetFileTransferType(true);	// ascii/binary
-	activeFTPClient->UpdateFile("F:\\tcpip.pdf");	 // put
 	activeFTPClient->DownloadFile("tcpip.pdf", "C:\\Users\\37186\\Desktop\\tcp\\tcpip.pdf");	// get
+	activeFTPClient->UpdateFile("F:\\tcpip.pdf");	 // put
 	activeFTPClient->DeleteRemoteFile("tcpip.pdf"); // delete
 	activeFTPClient->RenameRemoteFile("6.png", "c.png"); // rename
 	activeFTPClient->ShowFTPFileDirectory("test");	// dir

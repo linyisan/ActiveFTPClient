@@ -181,7 +181,7 @@ bool ActiveFTPClient::DownloadFile(const char * remoteFileName, const char *save
 	if (!mySocket->Accept()) return false;
 
 	FILE *fp = fopen(saveFileName, "wb");
-	if (NULL == fp) return false;
+	if (NULL == fp) { mySocket->CloseSocket(); return false; }
 	char recvBuf[BUF_SIZE] = { 0 };
 	int sz_recv = 0;
 	int sz_total = 0;
@@ -232,7 +232,7 @@ bool ActiveFTPClient::UpdateFile(char * filePathName)
 	if(!mySocket->Accept()) return false;
 
 	FILE *fp = fopen(filePathName, "rb");
-	if (NULL == fp) return false;
+	if (NULL == fp) { mySocket->CloseSocket(); return false; }
 	fseek(fp, 0, SEEK_END);
 	long sz_file = ftell(fp);	// 文件大小
 	char sendBuf[BUF_SIZE] = { 0 };

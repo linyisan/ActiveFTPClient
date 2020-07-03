@@ -15,6 +15,9 @@ void MySocket::ErrorHandle(const char * ErrorMsg, int ErrorCode)
 	else
 		strcat(msg, ErrorMsg);
 	fprintf(stdout, "%s\n", msg);
+	printf("网络通信发生错误，请重新运行程序！\n");
+	system("pause");
+	exit(1);
 }
 
 /*

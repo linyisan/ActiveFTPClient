@@ -41,6 +41,7 @@ char * ActiveFTPClient::SendCommandAndRecvMessage(const char * cmd)
 bool ActiveFTPClient::CreateFTPDataConnect()
 {
 	char strCommand[BUF_SIZE] = { 0 };
+	mySocket->CloseSocket();
 	SOCKADDR_IN *addr_data = mySocket->BindAndListen(mySocket->GetLocalHostIP());	
 	if (!addr_data) return false;
 	int tempPort = ntohs(addr_data->sin_port);	// 获取数据连接套接字的端口
@@ -114,7 +115,7 @@ void ActiveFTPClient::EnterUsernameAndPassword()
 	printf("\n>>请输入密码:");
 	memset(this->password, 0, sizeof(this->password));
 	char ch;
-	fflush(stdin);	//接收输入用户名时的空白符'\n'
+	rewind(stdin);	//接收输入用户名时的空白符'\n'
 	while (true)
 	{
 		ch = getch();
@@ -237,13 +238,14 @@ bool ActiveFTPClient::UpdateFile(char * filePathName)
 	char sendBuf[BUF_SIZE] = { 0 };
 	int sz_sent = 0;	// 到目前为止总共发送的字节大小
 	int nSend = 0;	// 本次发送的字节大小
+	int sz_read = 0;	// 本次实际读入字节大小
 	rewind(fp);
 	do
 	{
 		memset(sendBuf, 0, sizeof(sendBuf));
 		if (0 != feof(fp))	break; // 文件指针到末尾
-		fread(sendBuf, sizeof(char), sizeof(sendBuf), fp); // 返回值是实际读入数据块的个数，每块一个char字节
-		nSend = mySocket->SendPackToClient(sendBuf, sizeof(sendBuf));
+		sz_read = fread(sendBuf, sizeof(char), sizeof(sendBuf), fp); // 返回值是实际读入数据块的个数，每块一个char字节
+		nSend = mySocket->SendPackToClient(sendBuf, sz_read);
 		sz_sent = sz_sent + nSend;
 		printf("\r>>目前上传进度:%3.1f%%", 1.0 * sz_sent / sz_file *100);
 	} while (nSend > 0);

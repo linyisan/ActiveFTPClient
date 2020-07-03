@@ -76,7 +76,7 @@ void start()
 			"1、设置文件传输类型\n2、上传文件\n3、文件下载\n4、删除文件\n5、文件重命名\n6、显示路径下的子文件夹及其文件详细信息\n7、显示目前工作路径\n8、切换（工作）路径\n9、创建新文件夹\n10、删除文件夹（只能是空的）\n11、结束FTP连接\n"
 			  );
 		printf("请选择要执行的功能（输入相应的数字）：");
-		fflush(stdin);
+		rewind(stdin);
 		scanf("%d",&chioce);
 	// 2.2 提示用户输入命令（并输入将要调用的FTP函数参数），调用对应FTP函数
 		switch(chioce)
@@ -189,7 +189,7 @@ void start()
 void InputFromCmd(char *argv)
 {
 	char ch = ' ';
-	fflush(stdin);	// 空白符'\n'
+	rewind(stdin);	// 空白符'\n'
 	char temp[100] = { 0 };
 	for(int i = 0;'\n' != (ch = getchar()) && i<sizeof(temp);i++)
 	{

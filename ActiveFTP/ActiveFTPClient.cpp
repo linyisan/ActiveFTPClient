@@ -118,15 +118,14 @@ void ActiveFTPClient::EnterUsernameAndPassword()
 	while (true)
 	{
 		ch = getch();
-		putchar('*');
 		if (ch == '\r') break;
 		this->password[strlen(this->password)] = ch;
 	}
 }
 
 /*
-	@brief 显示目录/文件夹下的子文件夹及其文件详细信息
-	@targetPath 要显示的文件夹，默认""为当前工作文件夹
+	@brief 显示路径下的子文件夹及其文件详细信息
+	@targetPath 要显示的路径，默认""为当前工作路径
 */
 bool ActiveFTPClient::ShowFTPFileDirectory(char *targetPath)
 {
@@ -181,7 +180,7 @@ bool ActiveFTPClient::DownloadFile(const char * remoteFileName, const char *save
 	if (!mySocket->Accept()) return false;
 
 	FILE *fp = fopen(saveFileName, "wb");
-	if (NULL == fp) { mySocket->CloseSocket(); return false; }
+	if (NULL == fp) {	mySocket->CloseSocket(); return false;}
 	char recvBuf[BUF_SIZE] = { 0 };
 	int sz_recv = 0;
 	int sz_total = 0;
@@ -220,7 +219,7 @@ bool ActiveFTPClient::UpdateFile(char * filePathName)
 	// 分割路径与文件名
 	char fileName[30] = { 0 };
 	char *p;
-	strcpy(fileName, (p = strstr(filePathName, "\\")) ? p + 1 : filePathName);
+	strcpy(fileName, (p = strrchr(filePathName, '\\')) ? p + 1 : filePathName);
 
 	//printf("\n>>准备上传文件%s\n", fileName);
 	sprintf(strCommand, "STOR %s\r\n", fileName);
@@ -251,6 +250,7 @@ bool ActiveFTPClient::UpdateFile(char * filePathName)
 	fclose(fp);
 	mySocket->CloseSocket();
 
+	putchar('\n');
 	char strResMsg[BUF_SIZE] = { 0 };
 	mySocket->RecvPack(strResMsg);
 	printf("%s", strResMsg);
@@ -316,8 +316,8 @@ bool ActiveFTPClient::DeleteEmptyFTPDirectory(char * remoteDirectoryName)
 }
 
 /*
-	@brief 切换FTP服务器（工作）目录
-	@targetPath 切换到的目标目录
+	@brief 切换FTP服务器（工作）路径
+	@targetPath 切换到的目标路径
 */
 bool ActiveFTPClient::ChangeFTPWorkingDirectory(char * targetPath)
 {
@@ -329,7 +329,7 @@ bool ActiveFTPClient::ChangeFTPWorkingDirectory(char * targetPath)
 }
 
 /*
-	@brief 显示目前所在（工作）目录
+	@brief 显示目前所在（工作）路径
 */
 void ActiveFTPClient::ShowFTPWorkingDirectory()
 {

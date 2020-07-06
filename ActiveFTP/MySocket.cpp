@@ -168,8 +168,6 @@ int MySocket::GetResponseCodeAtHead()
 */
 bool MySocket::Accept()
 {
-	int ret = 0;
-	
 	// accept() 接受来自FTP服务器的数据连接
 	SOCKADDR_IN addr_srvData;
 	int sz_addr = sizeof(addr_srvData);

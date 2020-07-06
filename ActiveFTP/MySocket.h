@@ -25,9 +25,6 @@ protected:
 private:
 	char BufForRecv[BUF_SIZE];
 	char BufForSend[BUF_SIZE];
-	//char *addr_Serv;
-	//char *port_Serv;
-	//int Code_Respond;
 	IN_ADDR LocalHostIP;
 	SOCKADDR_IN AddrServ;
 	SOCKET mSocket, socketServ, socketClnt; // 在本机充当服务器时使用socketServ,socketClnt；其中socketClnt用来收发数据

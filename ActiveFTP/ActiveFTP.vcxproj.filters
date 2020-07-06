@@ -26,10 +26,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ActiveFTPClient.h">
+    <ClInclude Include="MySocket.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MySocket.h">
+    <ClInclude Include="ActiveFTPClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

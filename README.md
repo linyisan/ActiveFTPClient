@@ -38,35 +38,15 @@
 
 ### 3.2.1 基本结构与类图
 
-```mermaid
-graph BT
-	菜单界面 --> FTP操作命令 --> 套接字通信
-```
+| ![img](image/01.png) | ![img](image/02.png) |
+| :------------------: | :------------------: |
+|   图4 程序基本结构   |      图5 类关系      |
 
 
-
-```mermaid
-classDiagram
-	MySock <-- ActiveFTPClient
-	ActiveFTPClient <-- run
-	class MySock{
-	...
-	}
-	class ActiveFTPClient{
-		public bool CreateFTPCtrlConnect(const char *addr_To, int port_To=21)
-		protected bool CreateFTPDataConnect()
-		private MySock
-		...
-	}
-	class run{
-		...
-	}
-	
-```
 
 | ![image-20200704160935062](image/03.png) |
 | :--------------------------------------: |
-|             套接字通信工具类             |
+|           图6 套接字通信工具类           |
 
 ### 3.2.2 代码分析
 
@@ -104,216 +84,25 @@ classDiagram
 
 ​	`CreateFTPCtrlConnect()`建立控制连接主要由三个类`MySocket`的函数来实现，首先调用`Connet()`函数，本机作为客户端连接到FTP服务器，然后调用`RecvPack()`接收来自FTP服务器的应答信息，最后调用`CheckResponseCode()`通过验证应答码来确定是否成功连接到FTP服务器。
 
-​	具体代码如下：
+​	具体交互如下：
 
-```mermaid
-sequenceDiagram
-	participant A as ActiveFTPClient
-	participant M as MySocket
-	A ->>+ M:1.Connect()
-	M -->>- A:2.成功连接到FTP服务器
-	A ->>+ M:3.RecvPack()
-	M -->>-A:4.成功接收FTP应答
-	A ->>+ M:5.CheckResponseCode()
-	M ->> M:6.GetResponseCodeAtHead()
-	M -->>- A:7.FTP应答码正确
-	M -->> A:8.成功建立控制连接
-```
+| ![04](image/04.png)  |
+| :------------------: |
+| 图7 建立控制连接交互 |
 
 
-
-```c++
-bool ActiveFTPClient::CreateFTPCtrlConnect(const char * addr_To, int port_To)
-{
-	char strResMsg[BUF_SIZE] = { 0 };
-	if (!mySocket->Connect(addr_To, port_To)) return false;
-	mySocket->RecvPack(strResMsg);
-	printf("%s\n", strResMsg);
-	if (!mySocket->CheckResponseCode(220)) return false;
-	return true;
-}
-```
-
-```c++
-bool MySocket::Connect(const char * addr_To, int port_To)
-{
-	int ret = 0;
-	SOCKADDR_IN mAddr;
-	memset(&mAddr, 0, sizeof(mAddr));
-	mAddr.sin_family = AF_INET;
-	mAddr.sin_port = htons(port_To);
-	mAddr.sin_addr.S_un.S_addr = ret = inet_addr(addr_To);
-	if (INADDR_NONE == ret)
-	{
-		hostent * pHostent = gethostbyname(addr_To);
-		if (pHostent)
-			mAddr.sin_addr.S_un.S_addr = (*(in_addr*)pHostent->h_addr_list[0]).S_un.S_addr; ;
-	}
-	if (SOCKET_ERROR == connect(mSocket, (SOCKADDR*)&mAddr, sizeof(mAddr)))
-	{
-		ErrorHandle("connect()error!", WSAGetLastError());
-		return false;
-	}
-	int sz_AddrServ = sizeof(AddrServ);
-	getsockname(mSocket, (SOCKADDR*)&AddrServ, &sz_AddrServ); // 获取本机IP地址信息
-	LocalHostIP = AddrServ.sin_addr;
-	return true;
-}
-```
-
-```c++
-int MySocket::RecvPack(char *Buf, SOCKET socket)
-{
-	SOCKET tempsocket = socket;
-	if (0 == tempsocket)
-		tempsocket = mSocket;
-	memset(BufForRecv, 0, sizeof(BufForRecv));
-	int nRecv = recv(tempsocket, BufForRecv, sizeof(BufForRecv), 0);
-	if (SOCKET_ERROR == nRecv)
-	{
-		ErrorHandle("RecvPack() error!", WSAGetLastError());
-		return false;
-	}
-	memcpy(Buf, BufForRecv, nRecv);
-	return nRecv;
-}
-```
-
-```C++
-bool MySocket::CheckResponseCode(int VerifyCode)
-{
-	if (VerifyCode == GetResponseCodeAtHead())
-		return true;
-	return false;
-}
-```
 
 #### 二、创建数据连接的实现
 
 ​	`CreateFTPDataConnect()`建立数据连接主要由三个类`MySocket`的函数和一个类`AcitveFTPClient()`函数来实现，主动模式下，在建立数据连接时，本机作为"服务端"而FTP服务器作为“客户端”。首先调用`CloseSocket()`函数关闭可能使用过的数据连接相关套接字，然后调用`BindAndListen()`为数据连接相关套接字绑定IP和系统自动分配的端口，并使之处于监听状态，再调用`SendCommandAndRecvMessage()`发送`PORT`FTP命令告知FTP服务器本机IP和端口，最后调用`CheckResponseCode()`通过验证应答码来确定FTP服务器是否已成功接收`PORT`命令。后续调用`Accept()`真正建立数据连接。
 
-```mermaid
-sequenceDiagram
-	participant A as ActiveFTPClient
-	participant M as MySocket
-	A ->> M:1.CloseSocket()
-	A ->>+ M:2.BindAndListen()
-	M -->>-A:3.成功监听数据连接用端口
-	A ->>+M:4.SendPack()
-	activate A
-	M -->>-A:5.成功发送FTP命令"PORT"
-	A ->>+M:6.RecvPack()
-	M -->>-A:7.成功接收FTP应答
-	deactivate A
-	A ->>+ M:8.CheckResponseCode()
-	M ->> M:9.GetResponseCodeAtHead()
-	M -->>- A:10.FTP应答码正确
-	A ->>+ M:11.Accept()
-	M -->>- A:12.成功建立数据连接
-```
+​	具体交互如下：
+
+| ![05](image/05.png)  |
+| :------------------: |
+| 图8 建立数据连接交互 |
 
 
-
-​	具体代码如下：
-
-```c++
-bool ActiveFTPClient::CreateFTPDataConnect()
-{
-	char strCommand[BUF_SIZE] = { 0 };
-	mySocket->CloseSocket();
-	SOCKADDR_IN *addr_data = mySocket->BindAndListen(mySocket->GetLocalHostIP());	
-	if (!addr_data) return false;
-	int tempPort = ntohs(addr_data->sin_port);	// 获取数据连接套接字的端口
-	char strAddr[1024] = { 0 }; // 192,168,101,100,14,178
-	strcpy(strAddr, mySocket->GetLocalHostIP());
-	ReplaceStr(strAddr, ".", ",");
-	sprintf(strAddr, "%s,%d,%d",strAddr, tempPort / 256, tempPort % 256);
-
-	sprintf(strCommand, "PORT %s\r\n", strAddr);
-	SendCommandAndRecvMessage(strCommand);
-	if (!mySocket->CheckResponseCode(200)) return false;
-	return true;
-}
-```
-
-```c++
-void MySocket::CloseSocket(bool toCloseAllSocket)
-{
-	if (0 != socketClnt) closesocket(socketClnt);
-	if (0 != socketServ) closesocket(socketServ);
-	if (toCloseAllSocket)
-	{
-		if (0 != mSocket) closesocket(mSocket);
-	}
-}
-```
-
-```c++
-SOCKADDR_IN * MySocket::BindAndListen(const char * addr_To, int port_To)
-{
-	int ret = 0;
-	SOCKADDR_IN mAddr;
-	socketServ = socket(AF_INET, SOCK_STREAM, 0);
-	memset(&mAddr, 0, sizeof(mAddr));
-	mAddr.sin_family = AF_INET;
-	mAddr.sin_port = htons(port_To);
-	mAddr.sin_addr.S_un.S_addr = ret = inet_addr(addr_To);
-	if (INADDR_NONE == ret)
-	{
-		hostent * pHostent = gethostbyname(addr_To);
-		if (pHostent)
-			mAddr.sin_addr.S_un.S_addr = (*(in_addr*)pHostent->h_addr_list[0]).S_un.S_addr; ;
-	}
-	if (SOCKET_ERROR == bind(socketServ, (SOCKADDR*)&mAddr, sizeof(mAddr)))
-	{
-		ErrorHandle("Bind() error!", WSAGetLastError());
-		return NULL;
-	}
-
-	// listen() 开始监听/工作
-	if (SOCKET_ERROR == listen(socketServ, 3))
-	{
-		ErrorHandle("listen() socketClnt error!", WSAGetLastError());
-		return false;
-	}
-
-	int sz_AddrServ = sizeof(AddrServ);
-	memset(&AddrServ, 0, sizeof(sz_AddrServ));
-	getsockname(socketServ, (struct sockaddr *)&AddrServ, &sz_AddrServ); // 获取系统分配的端口
-	return &AddrServ;
-}
-```
-
-```c++
-char * ActiveFTPClient::SendCommandAndRecvMessage(const char * cmd)
-{
-	char Buf[BUF_SIZE] = { 0 };
-	printf("-->%s", cmd);
-	if (!(mySocket->SendPack(cmd, strlen(cmd))>0)) return NULL;
-	mySocket->RecvPack(Buf);
-	printf("%s", Buf);
-	return Buf;
-}
-```
-
-```c++
-bool MySocket::Accept()
-{
-	// accept() 接受来自FTP服务器的数据连接
-	SOCKADDR_IN addr_srvData;
-	int sz_addr = sizeof(addr_srvData);
-	memset(&addr_srvData, 0, sz_addr);
-	getsockname(socketServ, (SOCKADDR*)&addr_srvData, &sz_addr);
-	memset(&addr_srvData, 0, sz_addr);
-	socketClnt = accept(socketServ, (SOCKADDR*)&addr_srvData, &sz_addr);
-	if (INVALID_SOCKET == socketClnt)
-	{
-		ErrorHandle("accept() socketData error!", WSAGetLastError());
-		return false;
-	}
-	return true;
-}
-```
 
 # 4.本次实验感想与心得
 
